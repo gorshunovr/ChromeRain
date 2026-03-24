@@ -1,0 +1,148 @@
+/* ── Reset & fullscreen canvas ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+canvas { display: block; }
+
+/* ── Cyberpunk UI overlay ── */
+#ui {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 10;
+  font-family: 'Courier New', monospace; color: #e0e0e0;
+}
+
+#hud-top {
+  position: absolute; top: 20px; left: 20px;
+  background: rgba(5, 5, 20, 0.7);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  padding: 18px 24px; border-radius: 4px;
+  max-width: 340px;
+}
+#hud-top h1 {
+  font-size: 16px; letter-spacing: 4px; margin-bottom: 4px;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff, 0 0 30px #00ffff;
+}
+#hud-top h2 {
+  font-size: 11px; letter-spacing: 2px; font-weight: 400;
+  color: #ff69b4;
+  text-shadow: 0 0 8px #ff69b4;
+  margin-bottom: 12px;
+}
+#hud-top p {
+  font-size: 10px; line-height: 1.7; color: #888;
+  letter-spacing: 1px;
+}
+#hud-top p span {
+  color: #ff00ff;
+  text-shadow: 0 0 6px #ff00ff;
+}
+
+/* ── Scanline overlay ── */
+#scanlines {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none; z-index: 11;
+}
+
+/* ── Shared neon panel base ── */
+.neon-panel {
+  background: rgba(5, 5, 20, 0.75);
+  padding: 14px 18px; border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  pointer-events: auto;
+}
+.neon-panel .panel-title {
+  font-size: 10px; letter-spacing: 3px;
+  margin-bottom: 10px; text-transform: uppercase;
+}
+
+/* ── Audio control panel (top-right) ── */
+#audio-panel {
+  position: fixed; top: 20px; right: 20px; z-index: 15;
+  border: 1px solid rgba(255, 0, 255, 0.3);
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.15), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+}
+#audio-panel .panel-title {
+  color: #ff00ff;
+  text-shadow: 0 0 8px #ff00ff;
+}
+#audio-panel .audio-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+#audio-panel .audio-row:last-child { margin-bottom: 0; }
+#audio-panel label {
+  font-size: 11px; color: #aaa; letter-spacing: 1px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  user-select: none;
+}
+#audio-panel label:hover { color: #00ffff; }
+#audio-panel .toggle-icon {
+  display: inline-block; width: 16px; text-align: center;
+  font-size: 13px;
+}
+#audio-panel .vol-label {
+  font-size: 9px; color: #666; letter-spacing: 1px; margin-top: 2px;
+}
+
+/* ── Neon-styled range slider (shared) ── */
+.neon-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 80px; height: 4px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none; cursor: pointer;
+}
+.neon-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #ff00ff;
+  box-shadow: 0 0 6px #ff00ff, 0 0 12px #ff00ff;
+  cursor: pointer;
+}
+.neon-slider::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 50%; border: none;
+  background: #ff00ff;
+  box-shadow: 0 0 6px #ff00ff, 0 0 12px #ff00ff;
+  cursor: pointer;
+}
+
+/* ── Bloom controls panel (bottom-right) ── */
+#bloom-panel {
+  position: fixed; bottom: 20px; right: 20px; z-index: 15;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  min-width: 220px;
+}
+#bloom-panel .panel-title {
+  color: #00ffff;
+  text-shadow: 0 0 8px #00ffff;
+}
+#bloom-panel .bloom-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; font-size: 11px; color: #aaa; letter-spacing: 1px;
+}
+#bloom-panel .bloom-row:last-child { margin-bottom: 0; }
+#bloom-panel .bloom-val {
+  font-size: 10px; color: #00ffff; min-width: 30px; text-align: right;
+}
+
+/* ── Crosshair ── */
+#crosshair {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px; height: 20px; z-index: 12;
+  pointer-events: none; display: none;
+}
+#crosshair::before, #crosshair::after {
+  content: ''; position: absolute; background: rgba(0,255,255,0.5);
+}
+#crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+#crosshair::after  { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }

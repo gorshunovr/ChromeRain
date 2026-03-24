@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chrome Rain • Sector 01</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- UI Overlay -->
+<div id="ui">
+  <div id="hud-top">
+    <h1>CHROME RAIN &bull; SECTOR 01</h1>
+    <h2>Night City 2077</h2>
+    <p>
+      <span>&#9654; CLICK</span> to walk<br>
+      <span>&#9654; WASD</span> move<br>
+      <span>&#9654; MOUSE</span> look around<br>
+      <span>&#9654; ESC</span> release cursor
+    </p>
+  </div>
+</div>
+
+<!-- Audio element: synth music
+  Audio: "Ambient Rain" from Pixabay
+  Source: https://pixabay.com/music/ambient-rain-491532/
+  License: https://pixabay.com/service/license-summary/
+  Pixabay Content License — free for commercial & personal use, no attribution required.
+-->
+<audio id="audio-ambience" loop preload="auto"
+  src="htb-music-rain-491532.mp3"></audio>
+
+<!-- Audio control panel -->
+<div id="audio-panel" class="neon-panel">
+  <div class="panel-title">Audio Control</div>
+  <div class="audio-row">
+    <label id="audio-toggle">
+      <span class="toggle-icon" id="audio-icon">&#x1f507;</span>
+      Ambience
+    </label>
+    <input type="range" class="neon-slider" id="audio-vol" min="0" max="100" value="50" title="Volume">
+  </div>
+  <div class="vol-label">Click scene to unlock audio</div>
+</div>
+
+<!-- Bloom controls panel -->
+<div id="bloom-panel" class="neon-panel">
+  <div class="panel-title">Bloom Settings</div>
+  <div class="bloom-row">
+    <span>Strength</span>
+    <input type="range" class="neon-slider" id="bloom-strength" min="0" max="150" value="50">
+    <span class="bloom-val" id="bloom-strength-val">50</span>
+  </div>
+  <div class="bloom-row">
+    <span>Radius</span>
+    <input type="range" class="neon-slider" id="bloom-radius" min="0" max="100" value="50">
+    <span class="bloom-val" id="bloom-radius-val">0.50</span>
+  </div>
+  <div class="bloom-row">
+    <span>Threshold</span>
+    <input type="range" class="neon-slider" id="bloom-threshold" min="0" max="100" value="25">
+    <span class="bloom-val" id="bloom-threshold-val">0.25</span>
+  </div>
+</div>
+
+<div id="scanlines"></div>
+<div id="crosshair"></div>
+
+<!-- Three.js via importmap (module-based, supports addons) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
