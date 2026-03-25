@@ -32,6 +32,9 @@ const signCanvases    = [];   // canvas + ctx pairs for scanline animation on si
 let spinner;                  // flying vehicle
 let spinnerAngle = 0;
 
+// Ground ripple shader uniforms — advanced once per frame in animate()
+let groundUniforms;
+
 // Collision — AABB list built at initBuildings() time, checked every frame
 const buildingAABBs = [];     // { minX, maxX, minZ, maxZ } per building
 const PLAYER_RADIUS = 1.2;    // collision half-extent around the camera (world units)
@@ -127,10 +130,85 @@ function initLights() {
 //  3. GROUND & STREETS
 // ============================================================
 function initGround() {
-  // Wet dark asphalt — low roughness + metalness for reflective wet look
-  const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x0a0a0a, roughness: 0.4, metalness: 0.3
+  // ── Wet asphalt ground — GPU-side ripple shader ──────────────────────────
+  // Instead of a plain MeshStandardMaterial we use a ShaderMaterial so that
+  // animated neon-light reflections and ripple rings run entirely on the GPU.
+  //
+  // Each "neon source" is defined by a world-XZ position and a colour.  The
+  // fragment shader:
+  //   1. Starts from a very dark asphalt base colour.
+  //   2. For every source, attenuates its colour by distance² (point-light falloff).
+  //   3. Adds an expanding sine-wave ring (sin(dist – time)) that fades with
+  //      distance — this simulates the wet-road ripple pattern seen around
+  //      street-level neon fixtures after rain.
+  // Only `uTime` is mutated each frame (one float upload); everything else is static.
+
+  groundUniforms = {
+    uTime:     { value: 0 },
+    // World-XZ positions of the neon clusters (one per major building group)
+    uLightPos: { value: [
+      new THREE.Vector2( 14,  14),   // NE cluster — cyan
+      new THREE.Vector2(-14,  14),   // NW cluster — magenta
+      new THREE.Vector2( 14, -14),   // SE cluster — yellow-green
+      new THREE.Vector2(-14, -14),   // SW cluster — blue
+      new THREE.Vector2(  0,  -8),   // Centre road — hot-pink
+    ]},
+    uLightCol: { value: [
+      new THREE.Color(0x00ddff),   // cyan
+      new THREE.Color(0xff11cc),   // magenta
+      new THREE.Color(0xaaff00),   // yellow-green
+      new THREE.Color(0x2255ff),   // electric blue
+      new THREE.Color(0xff2266),   // hot-pink
+    ]},
+  };
+
+  const groundMat = new THREE.ShaderMaterial({
+    uniforms: groundUniforms,
+
+    vertexShader: /* glsl */`
+      // Pass the world-space XZ position to the fragment shader so distance
+      // calculations are in world units, not UV space.
+      varying vec2 vWorld;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorld   = wp.xz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+
+    fragmentShader: /* glsl */`
+      uniform float  uTime;
+      uniform vec2   uLightPos[5];
+      uniform vec3   uLightCol[5];
+      varying vec2   vWorld;
+
+      void main() {
+        // Very dark wet asphalt base — nearly black with a cold blue tint
+        vec3 col = vec3(0.025, 0.025, 0.035);
+
+        for (int i = 0; i < 5; i++) {
+          float d = length(vWorld - uLightPos[i]);
+
+          // Quadratic attenuation: bright close, fades to nothing past ~20 u
+          float atten = 1.0 / (1.0 + 0.06 * d * d);
+
+          // Expanding ring: sin wave travelling outward from the source.
+          // Frequency 1.4 → rings ~4.5 u apart; speed 2.8 u/s.
+          float ring = sin(d * 1.4 - uTime * 2.8) * 0.5 + 0.5;
+          // Gaussian envelope so rings vanish beyond ~15 u
+          float env  = exp(-d * 0.09);
+
+          // Base colour bleed (constant reflection pool) + animated rings
+          col += uLightCol[i] * (atten * 0.20 + ring * env * 0.12);
+        }
+
+        gl_FragColor = vec4(min(col, vec3(1.0)), 1.0);
+      }
+    `,
+
+    depthWrite: true,
   });
+
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), groundMat);
   ground.rotation.x = -PI / 2;
   scene.add(ground);
@@ -939,6 +1017,9 @@ function animate(now) {
   updateRain(delta);
   updateSpinner(delta);
   updateControls(delta);
+
+  // Advance ground ripple shader — single float upload, all ripple math is GPU-side
+  groundUniforms.uTime.value += delta;
 
   // Flicker neon street/building lights — sine wave per light with unique speed+offset
   for (let i = 0; i < flickerLights.length; i++) {
