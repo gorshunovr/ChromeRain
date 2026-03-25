@@ -37,6 +37,10 @@ canvas { display: block; }
   color: #ff00ff;
   text-shadow: 0 0 6px #ff00ff;
 }
+#fps-counter {
+  margin-top: 10px; font-size: 11px; letter-spacing: 2px;
+  color: #00ffff; text-shadow: 0 0 6px #00ffff;
+}
 
 /* ── Scanline overlay ── */
 #scanlines {
