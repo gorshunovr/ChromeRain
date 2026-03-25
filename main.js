@@ -32,6 +32,11 @@ const signCanvases    = [];   // canvas + ctx pairs for scanline animation on si
 let spinner;                  // flying vehicle
 let spinnerAngle = 0;
 
+// Collision — AABB list built at initBuildings() time, checked every frame
+const buildingAABBs = [];     // { minX, maxX, minZ, maxZ } per building
+const PLAYER_RADIUS = 1.2;    // collision half-extent around the camera (world units)
+const MAP_LIMIT     = 85;     // invisible boundary wall distance from origin
+
 // FPS counter state
 let fpsFrames = 0, fpsLast = 0, fpsEl;
 
@@ -270,7 +275,16 @@ function initBuildings() {
     { x: -14, z: -28, h: rand(28, 55), w: rand(7, 11), d: rand(7, 10) },
     { x: -28, z:  28, h: rand(50, 75), w: rand(8, 12), d: rand(8, 12) }
   ];
-  layouts.forEach(b => scene.add(createBuilding(b.x, b.z, b.h, b.w, b.d)));
+  layouts.forEach(b => {
+    scene.add(createBuilding(b.x, b.z, b.h, b.w, b.d));
+    // Register AABB for collision — half-extents from building centre
+    buildingAABBs.push({
+      minX: b.x - b.w / 2,
+      maxX: b.x + b.w / 2,
+      minZ: b.z - b.d / 2,
+      maxZ: b.z + b.d / 2,
+    });
+  });
 }
 
 // ============================================================
@@ -759,6 +773,50 @@ function updateControls(delta) {
 
   // Floor clamp — prevent walking through the ground
   if (camera.position.y < 5) camera.position.y = 5;
+
+  resolveCollisions();
+}
+
+// ============================================================
+//  10b. COLLISION RESOLUTION
+//  Treats the player as an axis-aligned square (half-extent PLAYER_RADIUS)
+//  and pushes it out of any building AABB it overlaps.  Runs after every
+//  movement update so the player can never pass through a building regardless
+//  of frame rate or movement speed.
+//
+//  Push-out strategy: find the shallowest overlap axis and slide along it.
+//  This feels natural — you slide along a wall rather than stopping dead.
+//
+//  A square map boundary at ±MAP_LIMIT is applied last.
+// ============================================================
+function resolveCollisions() {
+  const pos = camera.position;
+
+  for (const bb of buildingAABBs) {
+    // Expand AABB by PLAYER_RADIUS on all sides
+    const minX = bb.minX - PLAYER_RADIUS;
+    const maxX = bb.maxX + PLAYER_RADIUS;
+    const minZ = bb.minZ - PLAYER_RADIUS;
+    const maxZ = bb.maxZ + PLAYER_RADIUS;
+
+    if (pos.x > minX && pos.x < maxX && pos.z > minZ && pos.z < maxZ) {
+      // Compute penetration depth on all four sides
+      const dLeft  = pos.x - minX;  // distance to push left
+      const dRight = maxX - pos.x;  // distance to push right
+      const dFront = pos.z - minZ;  // distance to push toward -Z
+      const dBack  = maxZ - pos.z;  // distance to push toward +Z
+      // Push out along the shallowest axis (minimum work)
+      const minD = Math.min(dLeft, dRight, dFront, dBack);
+      if      (minD === dLeft)  pos.x = minX;
+      else if (minD === dRight) pos.x = maxX;
+      else if (minD === dFront) pos.z = minZ;
+      else                      pos.z = maxZ;
+    }
+  }
+
+  // Hard map boundary — invisible walls at the city perimeter
+  pos.x = Math.max(-MAP_LIMIT, Math.min(MAP_LIMIT, pos.x));
+  pos.z = Math.max(-MAP_LIMIT, Math.min(MAP_LIMIT, pos.z));
 }
 
 // ============================================================
